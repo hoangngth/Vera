@@ -1,19 +1,11 @@
 import ollama
 import chromadb
-import psycopg
 import ast
 from tqdm import tqdm
 from colorama import Fore
-from psycopg.rows import dict_row
+from db import fetch_conversations, store_conversation, remove_last_conversation
 
 client = chromadb.Client()
-DB_PARAMS = {
-    'host': 'localhost',
-    'port': 5432,
-    'dbname': 'memory_agent',
-    'user': 'vera_user',
-    'password': '123'
-}
 
 system_prompt = (
     'You are an AI assistant that has memory of every conversation you have ever had with this user. '
@@ -25,38 +17,6 @@ system_prompt = (
 )
 convo = [{"role": "system", "content": system_prompt}]
 
-def connect_db():
-    conn = psycopg.connect(**DB_PARAMS)
-    return conn
-
-def fetch_conversations():
-    conn = connect_db()
-    with conn.cursor(row_factory=dict_row) as cursor:
-        cursor.execute("SELECT id, prompt, response FROM conversations;") # SELECT * FROM conversations;
-        rows = cursor.fetchall()
-    conn.close()
-    print(Fore.BLUE + f'Fetched {len(rows)} conversations from the database.')
-    print(Fore.BLUE + f'Last conversation: {rows[-1]} \n')
-    return rows
-
-def store_conversation(prompt, response):
-    conn = connect_db()
-    with conn.cursor() as cursor:
-        cursor.execute(
-            "INSERT INTO conversations (prompt, response) VALUES (%s, %s);",
-            (prompt, response)
-        )
-        conn.commit()
-    conn.close()
-
-def remove_last_conversation():
-    conn = connect_db()
-    with conn.cursor() as cursor:
-        cursor.execute(
-            "DELETE FROM conversations WHERE id = (SELECT MAX(id) FROM conversations);"
-        )
-        conn.commit()
-    conn.close()
 
 def stream_response(prompt):
     response = ''
