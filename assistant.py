@@ -2,6 +2,8 @@ import ollama
 import chromadb
 import psycopg
 import ast
+from tqdm import tqdm
+from colorama import Fore
 from psycopg.rows import dict_row
 
 client = chromadb.Client()
@@ -33,6 +35,8 @@ def fetch_conversations():
         cursor.execute("SELECT id, prompt, response FROM conversations;") # SELECT * FROM conversations;
         rows = cursor.fetchall()
     conn.close()
+    print(Fore.BLUE + f'Fetched {len(rows)} conversations from the database.')
+    print(Fore.BLUE + f'Last conversation: {rows[-1]} \n')
     return rows
 
 def store_conversation(prompt, response):
@@ -45,9 +49,20 @@ def store_conversation(prompt, response):
         conn.commit()
     conn.close()
 
+def remove_last_conversation():
+    conn = connect_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "DELETE FROM conversations WHERE id = (SELECT MAX(id) FROM conversations);"
+        )
+        conn.commit()
+    conn.close()
+
 def stream_response(prompt):
     response = ''
     stream = ollama.chat("llama3", messages=convo, stream=True)
+    print(Fore.GREEN + "Vera: ")
+
     for chunk in stream:
         content = chunk['message']['content']
         response += content
@@ -76,7 +91,7 @@ def create_vector_store(conversations):
 def retrieve_embedding(queries, results_per_query=2):
     embeddings = set()
 
-    for query in queries:
+    for query in tqdm(queries, desc="Processing queries to vector store"):
         response = ollama.embeddings(model="nomic-embed-text", prompt=query)
         query_embedding = response['embedding']
 
@@ -111,7 +126,7 @@ def create_queries(prompt):
         {'role': 'user', 'content': prompt}
     ]
     response = ollama.chat(model='llama3', messages=query_convo)
-    print(f'\nVector database queries: {response["message"]["content"]} \n')
+    print(Fore.LIGHTYELLOW_EX + f'Vector database queries: {response["message"]["content"]} \n')
     try:
         return ast.literal_eval(response['message']['content'])
     except:
@@ -140,11 +155,31 @@ def recall(prompt):
     queries = create_queries(prompt=prompt)
     embeddings = retrieve_embedding(queries=queries)
     convo.append({"role": "user", "content": f'MEMORIES: {embeddings} \n USER PROMPT: {prompt}'})
-    print(f'\n{len(embeddings)} relevant memories recalled added for context.\n')
+    print(Fore.LIGHTYELLOW_EX + f'{len(embeddings)} relevant memories recalled added for context.\n')
 
 conversations = fetch_conversations()
 create_vector_store(conversations=conversations)
 while True:
-    prompt = input("You: ")
-    recall(prompt=prompt)
-    stream_response(prompt=prompt)
+    prompt = input(Fore.CYAN + "You: ")
+
+    # I don't like having to use recall all the time, so commenting this out for now.
+    # if prompt[:7].lower() == '/recall':
+    #     prompt = prompt[8:]
+    #     recall(prompt=prompt)
+    #     stream_response(prompt=prompt) 
+    # else:
+    #     convo.append({"role": "user", "content": prompt})
+    #     stream_response(prompt=prompt)
+
+    if prompt[:8].lower() == '/forget':
+        remove_last_conversation()
+        convo = convo[:-2]
+        print("\n")
+    elif prompt[:5].lower() in ['/exit', '/quit']:
+        break
+    else:
+        recall(prompt=prompt)
+        stream_response(prompt=prompt)
+
+    
+        
