@@ -1,18 +1,9 @@
-"""Build search queries for the vector store from a user prompt."""
-
-from typing import List
-
 import ast
 import ollama
 from colorama import Fore
 
 
-def create_queries(prompt: str) -> List[str]:
-    """Ask the LLM to produce a list of search queries for the given prompt.
-
-    Returns a Python list parsed from the model output. On parse failure the
-    original prompt is returned as a single-element list.
-    """
+def create_queries(prompt):
     query_msg = (
         'You are a first principle reasoning search query AI agent. '
         'Your list of search queries will be ran on an embedding database of all your conversations '

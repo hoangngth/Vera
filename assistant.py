@@ -1,12 +1,7 @@
-"""Main CLI assistant loop and helpers.
-
-This module handles the interactive loop, streaming responses, and
-recalling relevant memories via the vector store.
-"""
-
 import ollama
 from colorama import Fore
 from db import fetch_conversations, store_conversation, remove_last_conversation
+from speech_to_text import listen
 from vector_store import create_vector_store, retrieve_embedding
 from query_builder import create_queries
 
@@ -23,12 +18,7 @@ system_prompt = (
 convo = [{"role": "system", "content": system_prompt}]
 
 
-def stream_response(prompt: str) -> None:
-    """Stream model output for a user prompt and persist the conversation.
-
-    Appends the assistant response to the in-memory `convo` and stores the
-    conversation in the database using `store_conversation`.
-    """
+def stream_response(prompt):
     response = ''
     stream = ollama.chat("llama3", messages=convo, stream=True)
     print(Fore.GREEN + "Vera: ")
@@ -43,49 +33,61 @@ def stream_response(prompt: str) -> None:
     convo.append({"role": "assistant", "content": response})
 
 
-def recall(prompt: str) -> None:
-    """Generate queries for the prompt and retrieve matching memories.
-
-    The recalled memories are appended to `convo` as a context message.
-    """
+def recall(prompt):
     queries = create_queries(prompt=prompt)
     embeddings = retrieve_embedding(queries=queries)
     convo.append({"role": "user", "content": f'MEMORIES: {embeddings} \n USER PROMPT: {prompt}'})
     print(Fore.LIGHTYELLOW_EX + f'{len(embeddings)} relevant memories recalled added for context.\n')
 
+def handle_prompt(prompt: str):
+    low = prompt.lower()
 
-def main() -> None:
-    """Run the interactive assistant loop."""
+    if low.startswith('/forget'):
+        remove_last_conversation()
+        if len(convo) >= 2:
+            convo.pop()
+            convo.pop()
+        print("\n")
+        return
+
+    if low.startswith('/exit') or low.startswith('/quit'):
+        raise SystemExit
+
+    recall(prompt=prompt)
+    stream_response(prompt=prompt)
+
+
+def main():
     conversations = fetch_conversations()
     try:
         create_vector_store(conversations=conversations)
     except Exception:
-        # Creating the vector store is non-fatal for the CLI; continue.
         pass
 
+    voice_enabled = True
+    voice_stream = listen() if voice_enabled else None
+
     while True:
-        prompt = input(Fore.CYAN + "You: ").strip()
-        if not prompt:
-            continue
+        try:
+            # PRIORITY: voice input
+            if voice_enabled:
+                prompt = next(voice_stream) # Resume the listen() function until it yields the next recognized utterance, then pause it again.
+                print(Fore.CYAN + f"\nYou (voice): {prompt}")
+            else:
+                prompt = input(Fore.CYAN + "You: ").strip()
 
-        low = prompt.lower()
-        if low.startswith('/forget'):
-            remove_last_conversation()
-            # remove the last user+assistant entries if present
-            if len(convo) >= 2:
-                convo.pop()
-                convo.pop()
-            print("\n")
-            continue
+            if not prompt:
+                continue
 
-        if low.startswith('/exit') or low.startswith('/quit'):
+            handle_prompt(prompt)
+
+        except StopIteration:
             break
-
-        recall(prompt=prompt)
-        stream_response(prompt=prompt)
+        except KeyboardInterrupt:
+            break
+        except SystemExit:
+            break
 
 
 if __name__ == '__main__':
     main()
-
-

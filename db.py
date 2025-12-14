@@ -1,28 +1,14 @@
-"""Database helpers for storing and fetching conversations.
-
-Uses environment variables for configuration; supports loading a
-.env.local file for local secrets (if python-dotenv is installed).
-"""
-
-from typing import Dict, List
 import os
-
 import psycopg
 from psycopg.rows import dict_row
 from colorama import Fore
+from dotenv import load_dotenv
 
-# Optionally load environment variables from .env files if python-dotenv is installed.
-try:
-    from dotenv import load_dotenv
-    # Load local overrides first, then fallback to .env
-    load_dotenv('.env.local', override=True)
-    load_dotenv()
-except Exception:
-    pass
+load_dotenv()
 
 
-# Read DB settings from environment with sensible placeholders
-DB_PARAMS: Dict[str, object] = {
+# Read DB settings from environment
+DB_PARAMS = {
     'host': os.environ.get('DB_HOST', 'localhost'),
     'port': int(os.environ.get('DB_PORT', 5432)),
     'dbname': os.environ.get('DB_NAME') or 'your_db_name',
@@ -32,23 +18,20 @@ DB_PARAMS: Dict[str, object] = {
 
 
 def connect_db():
-    """Return a new psycopg connection using `DB_PARAMS`."""
     return psycopg.connect(**DB_PARAMS)
 
 
-def fetch_conversations() -> List[Dict]:
+def fetch_conversations():
     conn = connect_db()
     with conn.cursor(row_factory=dict_row) as cursor:
         cursor.execute("SELECT id, prompt, response FROM conversations;")
         rows = cursor.fetchall()
     conn.close()
     print(Fore.BLUE + f'Fetched {len(rows)} conversations from the database.')
-    if rows:
-        print(Fore.BLUE + f'Last conversation: {rows[-1]} \n')
     return rows
 
 
-def store_conversation(prompt: str, response: str) -> None:
+def store_conversation(prompt, response):
     conn = connect_db()
     with conn.cursor() as cursor:
         cursor.execute(
@@ -59,7 +42,7 @@ def store_conversation(prompt: str, response: str) -> None:
     conn.close()
 
 
-def remove_last_conversation() -> None:
+def remove_last_conversation():
     conn = connect_db()
     with conn.cursor() as cursor:
         cursor.execute(

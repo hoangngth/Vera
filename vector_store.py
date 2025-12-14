@@ -1,24 +1,11 @@
-"""Vector store helpers: creating collections and retrieving relevant embeddings.
-
-This module isolates Chromadb usage and embedding calls to Ollama.
-"""
-
-from typing import Dict, Iterable, List, Set
-
 import chromadb
 import ollama
 from tqdm import tqdm
 
-
 client = chromadb.Client()
 
 
-def create_vector_store(conversations: Iterable[Dict]) -> None:
-    """Create/replace the `vera_conversations` collection and add embeddings.
-
-    Conversations should be an iterable of dict-like objects with `id`,
-    `prompt`, and `response` keys.
-    """
+def create_vector_store(conversations):
     vector_store_name = "vera_conversations"
     try:
         client.delete_collection(name=vector_store_name)
@@ -37,12 +24,7 @@ def create_vector_store(conversations: Iterable[Dict]) -> None:
         )
 
 
-def classify_embedding(query: str, context: str) -> str:
-    """Return 'yes' or 'no' indicating whether `context` matches `query`.
-
-    Uses a small classification prompt to the LLM. Returns the model's
-    normalized string result (lowercase).
-    """
+def classify_embedding(query, context):
     classify_msg = (
         'You are an embedding classification AI agent. Your input will be a prompt and one embedded chunk of text. '
         'You will not respond as an AI assistant. You only respond "yes" or "no". '
@@ -62,13 +44,8 @@ def classify_embedding(query: str, context: str) -> str:
     return response['message']['content'].strip().lower()
 
 
-def retrieve_embedding(queries: List[str], results_per_query: int = 2) -> Set[str]:
-    """Return a set of matching document texts for the provided queries.
-
-    For each query we compute an embedding, query the vector store and then
-    classify returned documents to ensure high relevance.
-    """
-    embeddings: Set[str] = set()
+def retrieve_embedding(queries, results_per_query=2):
+    embeddings = set()
 
     for query in tqdm(queries, desc="Processing queries to vector store"):
         response = ollama.embeddings(model="nomic-embed-text", prompt=query)
