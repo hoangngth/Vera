@@ -8,6 +8,7 @@ __pycache__/
 
 # Local virtual environment
 .venv/
+venv/
 
 # Ignore speech-to-text model files
 vosk-model-*/

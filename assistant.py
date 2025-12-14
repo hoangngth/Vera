@@ -1,7 +1,7 @@
 import ollama
 from colorama import Fore
 from db import fetch_conversations, store_conversation, remove_last_conversation
-from speech_to_text import listen
+from speech_to_text_whisper import listen
 from vector_store import create_vector_store, retrieve_embedding
 from query_builder import create_queries
 
