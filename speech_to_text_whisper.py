@@ -16,9 +16,16 @@ model = WhisperModel(
 
 audio_queue = queue.Queue()
 
+
 def audio_callback(indata, frames, time, status):
     audio_queue.put(indata.copy())
 
+def clear_audio_queue():
+    while not audio_queue.empty():
+        try:
+            audio_queue.get_nowait()
+        except queue.Empty:
+            break
 
 def listen():
     print("🎙 Whisper listening...")
@@ -32,7 +39,10 @@ def listen():
         buffer = []
 
         while True:
-            data = audio_queue.get()
+            try:
+                data = audio_queue.get_nowait()  # non-blocking
+            except queue.Empty:
+                continue  # no audio yet, go back to flag check
             buffer.append(data)
 
             length = sum(len(b) for b in buffer) / SAMPLE_RATE

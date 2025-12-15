@@ -1,13 +1,14 @@
 import ollama
 from colorama import Fore
 from db import fetch_conversations, store_conversation, remove_last_conversation
-from speech_to_text_whisper import listen
+from speech_to_text_whisper import listen, clear_audio_queue
+from text_to_speech_xtts import speak
 from vector_store import create_vector_store, retrieve_embedding
 from query_builder import create_queries
 
 
 system_prompt = (
-    'You are an AI assistant that has memory of every conversation you have ever had with this user. '
+    'You are Vera, an AI assistant that has memory of every conversation you have ever had with this user. '
     'On every prompt from the user, the system has checked for any relevant messages you have had with the user. '
     'If any embedded previous conversations are attached, use them for context to responding to the user, '
     'if the context is relevant and useful to responding. If the recalled conversations are irrelevant, '
@@ -15,10 +16,14 @@ system_prompt = (
     'Just use any useful data from the previous conversations and respond normally as an intelligent AI assistant.'
 )
 
+# Flag to manage TTS state
+is_agent_speaking = False
+
 convo = [{"role": "system", "content": system_prompt}]
 
 
 def stream_response(prompt):
+    global is_agent_speaking
     response = ''
     stream = ollama.chat("llama3", messages=convo, stream=True)
     print(Fore.GREEN + "Vera: ")
@@ -27,16 +32,32 @@ def stream_response(prompt):
         content = chunk['message']['content']
         response += content
         print(content, end='', flush=True)
-    print()
+    print("\n")
 
+    # Store conversation 
     store_conversation(prompt=prompt, response=response)
     convo.append({"role": "assistant", "content": response})
+
+    # # Speak
+    # if response.strip():
+    #     is_agent_speaking = True
+    #     speak(response, filename="response.wav")
+    #     is_agent_speaking = False
 
 
 def recall(prompt):
     queries = create_queries(prompt=prompt)
     embeddings = retrieve_embedding(queries=queries)
-    convo.append({"role": "user", "content": f'MEMORIES: {embeddings} \n USER PROMPT: {prompt}'})
+    if embeddings:
+        convo.append({
+            "role": "system",
+            "content": f"Relevant memories:\n{embeddings}"
+        })
+
+    convo.append({
+        "role": "user",
+        "content": prompt
+    })
     print(Fore.LIGHTYELLOW_EX + f'{len(embeddings)} relevant memories recalled added for context.\n')
 
 def handle_prompt(prompt: str):
@@ -54,10 +75,14 @@ def handle_prompt(prompt: str):
         raise SystemExit
 
     recall(prompt=prompt)
-    stream_response(prompt=prompt)
+
+    # Clear leftover audio
+    clear_audio_queue()
+    stream_response(prompt)
 
 
 def main():
+    # speak_async("Hello, I am Vera!", filename="greeting.wav")
     conversations = fetch_conversations()
     try:
         create_vector_store(conversations=conversations)

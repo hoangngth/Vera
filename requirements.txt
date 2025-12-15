@@ -1,26 +1,28 @@
-# Core numeric stack
+# ---------- Core numeric stack ----------
 numpy==1.26.4
 
-# Database / memory
+# ---------- PyTorch (CPU) ----------
+torch==2.2.2
+torchaudio==2.2.2
+torchcodec==0.9.1
+
+# ---------- Database / memory ----------
 psycopg==3.1.19
 chromadb==0.4.24
 
-# CLI / UX
+# ---------- CLI / UX ----------
 colorama==0.4.6
 tqdm==4.66.4
 
-# LLM
+# ---------- LLM ----------
 ollama==0.2.1
 posthog==4.8.0
 
-# Speech-to-Text
-vosk==0.3.45
-faster-whisper
-pyaudio==0.2.14
-
-# Text-to-Speech (high quality, WAV export)
-coqui-tts==0.27.3
-
-# Audio playback & file handling
+# ---------- Speech-to-Text ----------
+faster-whisper==1.0.3
 sounddevice==0.4.6
 soundfile==0.12.1
+pyaudio==0.2.14
+
+# ---------- Text-to-Speech (NO eSpeak) ----------
+coqui-tts==0.27.3

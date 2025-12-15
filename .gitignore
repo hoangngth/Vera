@@ -12,3 +12,7 @@ venv/
 
 # Ignore speech-to-text model files
 vosk-model-*/
+
+# Generated audio output
+tts_output/
+*.wav
