@@ -16,14 +16,13 @@ system_prompt = (
     'Just use any useful data from the previous conversations and respond normally as an intelligent AI assistant.'
 )
 
-# Flag to manage TTS state
-is_agent_speaking = False
+agent_voice_enabled = True
+user_voice_enabled = True
 
 convo = [{"role": "system", "content": system_prompt}]
 
 
 def stream_response(prompt):
-    global is_agent_speaking
     response = ''
     stream = ollama.chat("llama3", messages=convo, stream=True)
     print(Fore.GREEN + "Vera: ")
@@ -38,11 +37,9 @@ def stream_response(prompt):
     store_conversation(prompt=prompt, response=response)
     convo.append({"role": "assistant", "content": response})
 
-    # # Speak
-    # if response.strip():
-    #     is_agent_speaking = True
-    #     speak(response, filename="response.wav")
-    #     is_agent_speaking = False
+    # Speak
+    if agent_voice_enabled and response.strip():
+        speak(response, filename="response.wav")
 
 
 def recall(prompt):
@@ -75,9 +72,6 @@ def handle_prompt(prompt: str):
         raise SystemExit
 
     recall(prompt=prompt)
-
-    # Clear leftover audio
-    clear_audio_queue()
     stream_response(prompt)
 
 
@@ -89,13 +83,14 @@ def main():
     except Exception:
         pass
 
-    voice_enabled = True
-    voice_stream = listen() if voice_enabled else None
+    user_voice_enabled = True
+    voice_stream = listen() if user_voice_enabled else None
 
     while True:
         try:
             # PRIORITY: voice input
-            if voice_enabled:
+            if user_voice_enabled:
+                clear_audio_queue()
                 prompt = next(voice_stream) # Resume the listen() function until it yields the next recognized utterance, then pause it again.
                 print(Fore.CYAN + f"\nYou (voice): {prompt}")
             else:
