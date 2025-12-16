@@ -5,6 +5,7 @@ from speech_to_text_whisper import listen, clear_audio_queue
 from text_to_speech_xtts import speak
 from vector_store import create_vector_store, retrieve_embedding
 from query_builder import create_queries
+from external_rag_module import TwitchChatRAG
 
 
 system_prompt = (
@@ -21,6 +22,10 @@ user_voice_enabled = True
 
 convo = [{"role": "system", "content": system_prompt}]
 
+twitch_rag = TwitchChatRAG(
+    k=5,
+    max_messages=10000
+)
 
 def stream_response(prompt):
     response = ''
@@ -44,11 +49,21 @@ def stream_response(prompt):
 
 def recall(prompt):
     queries = create_queries(prompt=prompt)
+
+    # Memory RAG
     embeddings = retrieve_embedding(queries=queries)
     if embeddings:
         convo.append({
             "role": "system",
             "content": f"Relevant memories:\n{embeddings}"
+        })
+
+    # Twitch Chat RAG
+    twitch_context = twitch_rag.retrieve(prompt)
+    if twitch_context:
+        convo.append({
+            "role": "system",
+            "content": "Twitch chat examples:\n" + "\n".join(twitch_context)
         })
 
     convo.append({
@@ -76,22 +91,26 @@ def handle_prompt(prompt: str):
 
 
 def main():
-    # speak_async("Hello, I am Vera!", filename="greeting.wav")
     conversations = fetch_conversations()
     try:
         create_vector_store(conversations=conversations)
     except Exception:
         pass
 
-    user_voice_enabled = True
-    voice_stream = listen() if user_voice_enabled else None
+    global user_voice_enabled
+    try:
+        if user_voice_enabled:
+            next(listen())
+            print("🎤 Voice input enabled")
+    except Exception as e:
+        print(f"⚠️ Voice input unavailable, falling back to text: {e}")
+        user_voice_enabled = False
 
     while True:
         try:
-            # PRIORITY: voice input
             if user_voice_enabled:
                 clear_audio_queue()
-                prompt = next(voice_stream) # Resume the listen() function until it yields the next recognized utterance, then pause it again.
+                prompt = next(listen()) # Resume the listen() function until it yields the next recognized utterance, then pause it again.
                 print(Fore.CYAN + f"\nYou (voice): {prompt}")
             else:
                 prompt = input(Fore.CYAN + "You: ").strip()

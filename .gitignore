@@ -16,3 +16,6 @@ vosk-model-*/
 # Generated audio output
 tts_output/
 *.wav
+
+# Data files (rag modules, datasets, etc.)
+data/*
