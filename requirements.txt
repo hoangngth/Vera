@@ -32,3 +32,7 @@ faiss-cpu
 
 # Hugging Face datasets
 datasets
+
+# API
+fastapi
+uvicorn
