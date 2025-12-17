@@ -1,48 +1,38 @@
-Vera API 🤖
+# Vera API 🤖
 
-Vera is a personal-use AI assistant, designed for local experimentation and future evolution into a potential SaaS product.
+Vera is a **personal-use AI assistant**, designed for **local experimentation** and future evolution into a potential **SaaS product**.
 
 It features:
+- Long-term conversation memory (vector store)
+- Retrieval-Augmented Generation (RAG)
+- Streaming LLM responses via Ollama
+- Optional speech-to-text and text-to-speech modules
+- Secure public access via Cloudflare Tunnel (free)
 
-Long-term conversation memory (vector store)
+This repository exposes Vera as an **HTTP API**, allowing usage from:
+- Postman
+- Web applications (Vue / React)
+- Mobile applications (iOS / Android)
+- Any internet-connected client
 
-Retrieval-Augmented Generation (RAG)
+---
 
-Streaming LLM responses via Ollama
+## ✨ Features
 
-Optional speech-to-text and text-to-speech modules
+- 🧠 **Conversation Memory** – semantic recall of relevant past interactions  
+- 🔍 **RAG Pipeline** – vector search + external context (e.g. Twitch chat)  
+- 💬 **Chat API** – simple and extensible `/chat` endpoint  
+- 🖥️ **CLI Interface** – legacy local assistant for fast iteration  
+- 🗣️ **Speech-to-Text** – Whisper (default), Vosk (offline fallback)  
+- 🔊 **Text-to-Speech** – XTTS (disabled by default due to latency)  
+- 🌐 **Internet Exposure** – free HTTPS access via Cloudflare Tunnel  
+- 🔐 **Optional Authentication** – API key–based security  
 
-Secure public access via Cloudflare Tunnel (free)
+---
 
-This repository exposes Vera as an HTTP API, allowing usage from:
+## 🏗️ Project Structure
 
-Postman
-
-Web applications (Vue / React)
-
-Mobile applications (iOS / Android)
-
-Any internet-connected client
-
-✨ Features
-
-🧠 Conversation Memory – semantic recall of relevant past interactions
-
-🔍 RAG Pipeline – vector search + external context (e.g. Twitch chat)
-
-💬 Chat API – simple and extensible /chat endpoint
-
-🖥️ CLI Interface – legacy local assistant for fast iteration
-
-🗣️ Speech-to-Text – Whisper (default), Vosk (offline fallback)
-
-🔊 Text-to-Speech – XTTS (disabled by default due to latency)
-
-🌐 Internet Exposure – free HTTPS access via Cloudflare Tunnel
-
-🔐 Optional Authentication – API key–based security
-
-🏗️ Project Structure
+```text
 .
 ├── api.py                     # FastAPI entrypoint (HTTP API)
 ├── vera_core.py               # Core Vera engine (LLM + memory + RAG)
@@ -58,77 +48,89 @@ Any internet-connected client
 ├── schema.sql                 # Database schema (table creation)
 ├── requirements.txt
 └── README.md
+```
 
-⚙️ Requirements
+## ⚙️ Requirements
 
-Python 3.10+
+- Python **3.10+**
+- Ollama installed and running
+- Supported LLM model (e.g. `llama3`)
 
-Ollama installed and running
+---
 
-Supported LLM model (e.g. llama3)
+## 📦 Installation
 
-📦 Installation
+Install dependencies:
+```bash
 pip install -r requirements.txt
-
+```
 
 Ensure Ollama is running:
-
+```bash
 ollama serve
-
+```
 
 Pull the model:
-
+```bash
 ollama pull llama3
+```
 
-▶️ Run the API Locally
+## ▶️ Run the API Locally
+```bash
 uvicorn api:app --host 0.0.0.0 --port 8000
-
+```
 
 API available at:
 
 http://localhost:8000
 
-
 Swagger UI:
 
 http://localhost:8000/docs
 
-🧪 Test with Postman
-Endpoint
+## 🧪 Test with Postman
+## Endpoint
 
+```http
 POST /chat
+```
 
 Request Body
+```json
 {
   "message": "Hello Vera"
 }
+```
 
 Response
+```json
 {
   "session_id": "uuid",
   "response": "Hello! How can I help you today?"
 }
+```
 
-🖥️ Run Vera via CLI (Legacy)
+## 🖥️ Run Vera via CLI (Legacy)
 
-Before the API existed, Vera was used as a local CLI assistant for rapid testing.
+Before the API existed, Vera was used as a **local CLI assistant** for rapid testing.
 
+```bash
 python vera_cli.py
-
+```
 
 This mode supports:
 
-Local conversation loop
+- Local conversation loop
+- Memory recall
+- Optional voice input/output
 
-Memory recall
+⚠️ The CLI is considered **legacy** and intended mainly for development/debugging.
 
-Optional voice input/output
+🌍 Expose API to the Internet (FREE):
 
-⚠️ The CLI is considered legacy and intended mainly for development/debugging.
-
-🌍 Expose API to the Internet (FREE)
+```bash
 cloudflared tunnel --url http://localhost:8000
-
+```
 
 Example public URL:
 
@@ -137,28 +139,28 @@ https://random-name.trycloudflare.com
 
 No domain or payment required.
 
-🔐 Security
+## 🔐 Security
 
-Authentication is optional by design.
+Authentication is **optional by design.**
 
-Example header:
+### Example header:
 
 Authorization: Bearer YOUR_API_KEY
 
-🔊 Voice (Optional)
-Speech-to-Text
+## 🔊 Voice (Optional)
 
-Whisper (default)
+### Speech-to-Text
 
-Vosk (offline fallback)
+- Whisper (default)
+- Vosk (offline fallback)
 
-Text-to-Speech
+### Text-to-Speech
 
-XTTS (disabled by default)
+- XTTS (disabled by default)
+- Outputs .wav files
 
-Outputs .wav files
-
-🧠 Architecture
+## 🧠 Architecture
+```plaintext
 Client (API / CLI)
         |
         v
@@ -173,11 +175,10 @@ Client (API / CLI)
         |
         v
       LLM (Ollama)
+```
 
-🗄️ Database
-
+## 🗄️ Database
 Schema defined in schema.sql.
 
-❤️ Credits
-
+## ❤️ Credits
 Built by Hoang Nguyen The
