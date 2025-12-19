@@ -29,6 +29,15 @@ class ChatResponse(BaseModel):
     session_id: str
     response: str
 
+class AudioRequest:
+    def __init__(
+        self,
+        file: UploadFile = File(...),
+        session_id: str | None = Form(None)
+    ):
+        self.file = file
+        self.session_id = session_id
+
 class AudioResponse(BaseModel):
     session_id: str
     transcript: str
@@ -51,18 +60,15 @@ def chat(req: ChatRequest):
     }
 
 @app.post("/audio", response_model=AudioResponse, dependencies=[Depends(verify_api_key)])
-async def audio_chat(
-    file: UploadFile = File(...),
-    session_id: str | None = Form(None),
-):
-    if not file.content_type.startswith("audio/"):
+async def audio_chat(req: AudioRequest):
+    if not req.file.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="Invalid audio file")
 
     session_id = session_id or str(uuid.uuid4())
 
     # Save uploaded audio temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(await file.read())
+        tmp.write(await req.file.read())
         tmp_path = tmp.name
 
     try:
