@@ -5,8 +5,6 @@ from pydantic import BaseModel
 from vera_core import VeraEngine
 from speech_to_text_whisper import transcribe_audio
 import uuid
-import tempfile
-import os
 from typing import Optional
 
 app = FastAPI(title="Vera API")
@@ -45,9 +43,9 @@ class AudioResponse(BaseModel):
     response_audio_url: Optional[str] = None # TTS URL placeholder
 
 @app.post("/chat", response_model=ChatResponse, dependencies=[Depends(verify_api_key)])
-def chat(req: ChatRequest):
-    session_id = req.session_id or str(uuid.uuid4())
+def chat(req: ChatRequest) -> ChatResponse:
 
+    session_id = req.session_id or str(uuid.uuid4())
     if session_id not in sessions:
         sessions[session_id] = VeraEngine()
 
@@ -60,34 +58,27 @@ def chat(req: ChatRequest):
     }
 
 @app.post("/audio", response_model=AudioResponse, dependencies=[Depends(verify_api_key)])
-async def audio_chat(req: AudioRequest):
+async def audio_chat(req: AudioRequest = Depends()) -> AudioResponse:
+
+    session_id = req.session_id or str(uuid.uuid4())
+    if session_id not in sessions:
+        sessions[session_id] = VeraEngine()
+
     if not req.file.content_type.startswith("audio/"):
-        raise HTTPException(status_code=400, detail="Invalid audio file")
+        raise HTTPException(
+            status_code=415,
+            detail="File must be an audio file"
+        )
+    
+    audio_bytes = await req.file.read()
+    transcript = transcribe_audio(audio_bytes)
 
-    session_id = session_id or str(uuid.uuid4())
+    engine = sessions[session_id]
+    response = engine.generate_response(transcript)
 
-    # Save uploaded audio temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(await req.file.read())
-        tmp_path = tmp.name
-
-    try:
-        # Speech-to-Text
-        transcript = transcribe_audio(tmp_path)
-
-        if not transcript.strip():
-            raise HTTPException(status_code=400, detail="Empty transcription")
-
-        # Generate response
-        engine = sessions[session_id]
-        response = engine.generate_response(transcript)
-
-        return {
-            "session_id": session_id,
-            "transcript": transcript,
-            "response": response,
-        }
-
-    finally:
-        # Cleanup temp file
-        os.remove(tmp_path)
+    return AudioResponse(
+        session_id=session_id,
+        transcript=transcript,
+        response=response,
+        audio_url=None
+    )

@@ -36,3 +36,4 @@ datasets
 # API
 fastapi
 uvicorn
+python-multipart
