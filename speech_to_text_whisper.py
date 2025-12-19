@@ -16,6 +16,9 @@ model = WhisperModel(
 
 audio_queue = queue.Queue()
 
+def transcribe_audio(audio_path: str) -> str:
+    result = model.transcribe(audio_path)
+    return result["text"]
 
 def audio_callback(indata, frames, time, status):
     audio_queue.put(indata.copy())
