@@ -6,18 +6,19 @@ from query_builder import create_queries
 from external_rag_module import TwitchChatRAG
 
 system_prompt = (
-    'You are Vera, an AI assistant that has memory of every conversation you have ever had with this user. '
-    'On every prompt from the user, the system has checked for any relevant messages you have had with the user. '
-    'If any embedded previous conversations are attached, use them for context to responding to the user, '
-    'if the context is relevant and useful to responding. If the recalled conversations are irrelevant, '
-    'disregard speaking about them and respond normally as an AI assistant. Do not talk about recalling conversations. '
-    'Just use any useful data from the previous conversations and respond normally as an intelligent AI assistant.'
+    "You are Vera, an AI assistant with memory of past conversations with this user. "
+    "Always focus on the current user prompt. "
+    "Use past conversation context only if it is directly relevant. "
+    "Do not mention or explain that you are recalling past conversations. "
+    "Do not repeat past conversations verbatim. "
+    "Respond naturally, clearly, and helpfully, using any relevant past information only when it is truly useful."
 )
 
 twitch_rag = TwitchChatRAG(k=5, max_messages=10000)
 
 class VeraEngine:
     def __init__(self):
+        self.temp_context = []
         self.convo = [{"role": "system", "content": system_prompt}]
         self._init_memory()
 
@@ -28,24 +29,26 @@ class VeraEngine:
         except Exception:
             pass
 
+
     def recall(self, prompt: str):
         queries = create_queries(prompt=prompt)
 
+        # Memory RAG
         embeddings = retrieve_embedding(queries=queries)
         if embeddings:
-            self.convo.append({
+            self.temp_context.append({
                 "role": "system",
-                "content": f"Relevant memories:\n{embeddings}"
+                "content": f"Use the following relevant memories to respond intelligently, but do not repeat verbatim:\n{embeddings}"
             })
 
+        # Twitch Chat RAG
         twitch_context = twitch_rag.retrieve(prompt)
         if twitch_context:
-            self.convo.append({
+            self.temp_context.append({
                 "role": "system",
-                "content": "Twitch chat examples:\n" + "\n".join(twitch_context)
+                "content": "Use these Twitch chat examples as reference for style and context, but do not repeat verbatim:\n" + "\n".join(twitch_context)
             })
 
-        self.convo.append({"role": "user", "content": prompt})
 
     def generate_response(self, prompt: str):
         if prompt.lower().startswith("/forget"):
@@ -57,17 +60,19 @@ class VeraEngine:
 
         self.recall(prompt)
 
-        response = ""
-        stream = ollama.chat(
-            model="llama3",
-            messages=self.convo,
-            stream=True
-        )
+        response = ''
+        full_context = self.convo + self.temp_context + [{"role": "user", "content": prompt}]
+        stream = ollama.chat("llama3", messages=full_context, stream=True)
 
         for chunk in stream:
             response += chunk["message"]["content"]
 
-        self.convo.append({"role": "assistant", "content": response})
+        # Reset temp_context
+        self.temp_context.clear()
+
+        # Store conversation 
         store_conversation(prompt=prompt, response=response)
+        self.convo.append({"role": "user", "content": prompt})
+        self.convo.append({"role": "assistant", "content": response})
 
         return response

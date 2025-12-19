@@ -9,17 +9,18 @@ from external_rag_module import TwitchChatRAG
 
 
 system_prompt = (
-    'You are Vera, an AI assistant that has memory of every conversation you have ever had with this user. '
-    'On every prompt from the user, the system has checked for any relevant messages you have had with the user. '
-    'If any embedded previous conversations are attached, use them for context to responding to the user, '
-    'if the context is relevant and useful to responding. If the recalled conversations are irrelevant, '
-    'disregard speaking about them and respond normally as an AI assistant. Do not talk about recalling conversations. '
-    'Just use any useful data from the previous conversations and respond normally as an intelligent AI assistant.'
+    "You are Vera, an AI assistant with memory of past conversations with this user. "
+    "Always focus on the current user prompt. "
+    "Use past conversation context only if it is directly relevant. "
+    "Do not mention or explain that you are recalling past conversations. "
+    "Do not repeat past conversations verbatim. "
+    "Respond naturally, clearly, and helpfully, using any relevant past information only when it is truly useful."
 )
 
-agent_voice_enabled = True
+agent_voice_enabled = False
 user_voice_enabled = True
 
+temp_context = []
 convo = [{"role": "system", "content": system_prompt}]
 
 twitch_rag = TwitchChatRAG(
@@ -29,7 +30,9 @@ twitch_rag = TwitchChatRAG(
 
 def stream_response(prompt):
     response = ''
-    stream = ollama.chat("llama3", messages=convo, stream=True)
+
+    full_context = convo + temp_context + [{"role": "user", "content": prompt}]
+    stream = ollama.chat("llama3", messages=full_context, stream=True)
     print(Fore.GREEN + "Vera: ")
 
     for chunk in stream:
@@ -38,8 +41,12 @@ def stream_response(prompt):
         print(content, end='', flush=True)
     print("\n")
 
+    # Reset temp_context
+    temp_context.clear()
+
     # Store conversation 
     store_conversation(prompt=prompt, response=response)
+    convo.append({"role": "user", "content": prompt})
     convo.append({"role": "assistant", "content": response})
 
     # Speak
@@ -53,23 +60,19 @@ def recall(prompt):
     # Memory RAG
     embeddings = retrieve_embedding(queries=queries)
     if embeddings:
-        convo.append({
+        temp_context.append({
             "role": "system",
-            "content": f"Relevant memories:\n{embeddings}"
+            "content": f"Use the following relevant memories to respond intelligently, but do not repeat verbatim:\n{embeddings}"
         })
 
     # Twitch Chat RAG
     twitch_context = twitch_rag.retrieve(prompt)
     if twitch_context:
-        convo.append({
+        temp_context.append({
             "role": "system",
-            "content": "Twitch chat examples:\n" + "\n".join(twitch_context)
+            "content": "Use these Twitch chat examples as reference for style and context, but do not repeat verbatim:\n" + "\n".join(twitch_context)
         })
 
-    convo.append({
-        "role": "user",
-        "content": prompt
-    })
     print(Fore.LIGHTYELLOW_EX + f'{len(embeddings)} relevant memories recalled added for context.\n')
 
 def handle_prompt(prompt: str):

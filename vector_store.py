@@ -26,20 +26,30 @@ def create_vector_store(conversations):
 
 def classify_embedding(query, context):
     classify_msg = (
-        'You are an embedding classification AI agent. Your input will be a prompt and one embedded chunk of text. '
-        'You will not respond as an AI assistant. You only respond "yes" or "no". '
-        'Determine whether the context contains data that directly is related to the search query. '
-        'If the context is seemingly exactly what the search query needs, respond "yes" if it is anything but directly '
-        'related respond "no". Do not respond "yes" unless the context is highly relevant to the search query.'
+        "You are an embedding classification AI agent. "
+        "Your input will be a search query and one chunk of embedded text. "
+        "You will NOT respond as an AI assistant. You will only respond with the single word 'yes' or 'no'. "
+        "Determine whether the embedded context directly contains information needed to answer the search query. "
+        "Respond 'yes' only if the context is highly relevant and directly useful to the query. "
+        "If it is not directly relevant, respond 'no'. "
+        "Do not explain your answer and do not output anything other than 'yes' or 'no'."
     )
+
     classify_convo = [
-        {'role': 'system', 'content': classify_msg},
-        {'role': 'user', 'content': 'SEARCH QUERY: What is the users name?\n\nEMBEDDED CONTEXT: You are Hoang. How can I help you today?'},
-        {'role': 'assistant', 'content': 'yes'},
-        {'role': 'user', 'content': 'SEARCH QUERY: Llama3 Python Voice Assistant \n\nEMBEDDED CONTEXT: Siri is a voice assistant developed by Apple Inc.'},
-        {'role': 'assistant', 'content': 'no'},
-        {'role': 'user', 'content': f'SEARCH QUERY: {query} \n\nEMBEDDED CONTEXT: {context}'}
+        {"role": "system", "content": classify_msg},
+
+        # Example 1: directly relevant
+        {"role": "user", "content": "SEARCH QUERY: What is the user's name?\n\nEMBEDDED CONTEXT: You are Hoang. How can I help you today?"},
+        {"role": "assistant", "content": "yes"},
+
+        # Example 2: not relevant
+        {"role": "user", "content": "SEARCH QUERY: Llama3 Python Voice Assistant\n\nEMBEDDED CONTEXT: Siri is a voice assistant developed by Apple Inc."},
+        {"role": "assistant", "content": "no"},
+
+        # Dynamic query/context
+        {"role": "user", "content": f"SEARCH QUERY: {query}\n\nEMBEDDED CONTEXT: {context}"}
     ]
+    
     response = ollama.chat(model='llama3', messages=classify_convo)
     return response['message']['content'].strip().lower()
 

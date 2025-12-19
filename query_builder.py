@@ -5,21 +5,40 @@ from colorama import Fore
 
 def create_queries(prompt):
     query_msg = (
-        'You are a first principle reasoning search query AI agent. '
-        'Your list of search queries will be ran on an embedding database of all your conversations '
-        'you have ever had with the user. With first principles create a Python list of queries to '
-        'search the embeddings database for any data that would be necessary to have access to in '
-        'order to correctly respond to the prompt. Your response must be a Python list with no syntax errors. '
-        'Do not explain anything and do not ever generate anything but a perfect syntax Python list'
+    "You are a first-principles reasoning search query AI agent. "
+    "Given the user's prompt, generate a Python list of short search queries "
+    "that would retrieve any relevant information from the embedding database "
+    "of all conversations you have ever had with this user. "
+    "Your output must be ONLY a valid Python list of strings, with no explanations, "
+    "no extra text, and no syntax errors. "
+    "Think in terms of concepts, facts, or context necessary to respond accurately."
     )
 
     query_convo = [
-        {'role': 'system', 'content': query_msg},
-        {'role': 'user', 'content': 'Write an email to my car insurance company and create a pursuasive request for them to lower prices based on my good driving record'},
-        {'role': 'assistant', 'content': '["What is the users name?", "What is the users current auto insurance provider?", "What is the users driving record?"]'},
-        {'role': 'user', 'content': 'how can i convert the speak function in my llama3 python voice assistant to use pyttsx3 instead'},
-        {'role': 'assistant', 'content': '["Llama3 voice assistant", "Python voice assistant", "openAI TTS", "openai speak", "text to speech python", "convert TTS to pyttsx3"]'},
-        {'role': 'user', 'content': prompt},
+        {"role": "system", "content": query_msg},
+
+        # Example 1: insurance
+        {"role": "user", "content": "Write an email to my car insurance company and create a persuasive request for them to lower prices based on my good driving record"},
+        {"role": "assistant", "content": '["User name", "Current auto insurance provider", "Driving record", "Insurance policy details"]'},
+
+        # Example 2: Python voice assistant
+        {"role": "user", "content": "How can I convert the speak function in my Llama3 Python voice assistant to use pyttsx3 instead?"},
+        {"role": "assistant", "content": '["Llama3 voice assistant", "Python TTS libraries", "pyttsx3 usage", "Convert text-to-speech function"]'},
+
+        # Example 3: cats / personal memory
+        {"role": "user", "content": "Do you remember my cat Mellow?"},
+        {"role": "assistant", "content": '["User cat name", "Previously mentioned pets", "Feline companion facts"]'},
+
+        # Example 4: cooking / recipe
+        {"role": "user", "content": "I want to make a chocolate cake from scratch, how should I do it?"},
+        {"role": "assistant", "content": '["Chocolate cake recipes", "Baking instructions", "Ingredients for chocolate cake", "Cooking steps"]'},
+
+        # Example 5: travel / planning
+        {"role": "user", "content": "Can you suggest a travel itinerary for a week in Japan?"},
+        {"role": "assistant", "content": '["Japan travel itinerary", "Top tourist spots in Japan", "Local customs and culture", "Recommended activities in Japan"]'},
+
+        # Dynamic user prompt
+        {"role": "user", "content": prompt},
     ]
 
     response = ollama.chat(model='llama3', messages=query_convo)
