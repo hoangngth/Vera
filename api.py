@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from authorization import verify_api_key
 from pydantic import BaseModel
 from vera_core import VeraEngine
-from speech_to_text_whisper import transcribe_audio
+from speech_to_text_whisper import transcribe_webm
 import uuid
 from typing import Optional
 
@@ -77,7 +77,7 @@ async def transcribe(req: TranscribeRequest = Depends()) -> TranscribeResponse:
         )
     
     audio_bytes = await req.file.read()
-    transcript = transcribe_audio(audio_bytes)
+    transcript = transcribe_webm(audio_bytes)
 
     return TranscribeResponse(
         transcript=transcript
@@ -97,7 +97,7 @@ async def audio_chat(req: AudioRequest = Depends()) -> AudioResponse:
         )
     
     audio_bytes = await req.file.read()
-    transcript = transcribe_audio(audio_bytes)
+    transcript = transcribe_webm(audio_bytes)
 
     engine = sessions[session_id]
     response = engine.generate_response(transcript)
