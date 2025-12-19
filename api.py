@@ -27,6 +27,16 @@ class ChatResponse(BaseModel):
     session_id: str
     response: str
 
+class TranscribeRequest:
+    def __init__(
+        self,
+        file: UploadFile = File(...),
+    ):
+        self.file = file
+
+class TranscribeResponse(BaseModel):
+    transcript: str
+
 class AudioRequest:
     def __init__(
         self,
@@ -56,6 +66,22 @@ def chat(req: ChatRequest) -> ChatResponse:
         "session_id": session_id,
         "response": response
     }
+
+@app.post("/transcribe", response_model=TranscribeResponse, dependencies=[Depends(verify_api_key)])
+async def transcribe(req: TranscribeRequest = Depends()) -> TranscribeResponse:
+
+    if not req.file.content_type.startswith("audio/"):
+        raise HTTPException(
+            status_code=415,
+            detail="File must be an audio file"
+        )
+    
+    audio_bytes = await req.file.read()
+    transcript = transcribe_audio(audio_bytes)
+
+    return TranscribeResponse(
+        transcript=transcript
+    )
 
 @app.post("/audio", response_model=AudioResponse, dependencies=[Depends(verify_api_key)])
 async def audio_chat(req: AudioRequest = Depends()) -> AudioResponse:
