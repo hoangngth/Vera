@@ -1,4 +1,4 @@
-# Vera API 🤖
+# Vera 🤖
 
 Vera is a **personal-use AI assistant**, designed for **local experimentation** and future evolution into a potential **SaaS product**.
 
@@ -7,7 +7,6 @@ It features:
 - Retrieval-Augmented Generation (RAG)
 - Streaming LLM responses via Ollama
 - Optional speech-to-text and text-to-speech modules
-- Secure public access via Cloudflare Tunnel (free)
 
 This repository exposes Vera as an **HTTP API**, allowing usage from:
 - Postman
@@ -88,27 +87,118 @@ Swagger UI:
 
 http://localhost:8000/docs
 
-## 🧪 Test with Postman
-## Endpoint
+## Endpoints
 
-```http
-POST /chat
-```
+### 1. `POST /chat` — Text Chat
 
-Request Body
+Send a text message to Vera and receive a response.
+
+**Request Body:**
+
+| Field        | Type   | Required | Description |
+|-------------|--------|----------|-------------|
+| `session_id` | string | No       | Optional session ID to continue a previous conversation. If omitted, a new session is created. |
+| `message`    | string | Yes      | The user message or prompt for Vera. |
+
+**Example Request (JSON):**
+
 ```json
 {
-  "message": "Hello Vera"
+  "session_id": "abc123",
+  "message": "Hello Vera, how are you?"
 }
 ```
 
-Response
+**Reponse:**
+
+| Field        | Type   | Required | Description |
+|-------------|--------|----------|-------------|
+| `session_id` | string | No       | The session ID (useful to continue the conversation). |
+| `response`    | string | Yes      | Vera's generated response to the message. |
+
+**Example Response (JSON):**
+
 ```json
 {
-  "session_id": "uuid",
-  "response": "Hello! How can I help you today?"
+  "session_id": "abc123",
+  "response": "Hello! I'm doing great. How can I assist you today?"
 }
 ```
+
+### 2. `POST /transcribe` — Audio Transcription
+
+Upload an audio file to transcribe its content into text.
+
+**Request:**
+
+- **Content-Type:** `multipart/form-data`
+- **Form Field:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | file | Yes | Audio file to transcribe. Supported formats: any audio MIME type. |
+
+**Example (curl):**
+
+```bash
+curl -X POST "http://<your-server-address>/transcribe" \
+  -H "Authorization: Bearer <YOUR_API_KEY>" \
+  -F "file=@audio_sample.webm"
+```
+
+| Field | Type  | Description |
+|-------|-------|-------------|
+| `transcript` | string | Transcribed text from the audio file. |
+
+**Example Response (JSON):**
+
+```json
+{
+  "transcript": "Hello Vera, can you tell me a fun fact?"
+}
+```
+
+### 3. `POST /audio` — Audio Chat
+
+Upload an audio file and receive both transcription and Vera's response.
+
+**Request:**
+
+- **Content-Type:** `multipart/form-data`
+- **Form Fields:**
+
+| Field        | Type   | Required | Description |
+|-------------|--------|----------|-------------|
+| `file`       | file   | Yes      | Audio file containing the user's speech. |
+| `session_id` | string | No       | Optional session ID for conversation continuity. |
+
+**Example (curl):**
+
+```bash
+curl -X POST "http://<your-server-address>/audio" \
+  -H "Authorization: Bearer <YOUR_API_KEY>" \
+  -F "file=@user_speech.webm" \
+  -F "session_id=abc123"
+  ```
+
+**Response:**
+
+| Field               | Type           | Description |
+|--------------------|----------------|-------------|
+| `session_id`        | string         | Session ID for conversation continuity. |
+| `transcript`        | string         | Transcribed text from the audio. |
+| `response`          | string         | Vera's generated response to the transcribed text. |
+| `response_audio_url`| string or null | Placeholder for TTS audio URL (currently `null`). |
+
+**Example Response:**
+
+```json
+{
+  "session_id": "abc123",
+  "transcript": "Hello Vera, tell me a joke.",
+  "response": "Sure! Why did the computer go to the doctor? Because it caught a virus!",
+  "response_audio_url": null
+}
 
 ## 🖥️ Run Vera via CLI (Legacy)
 
@@ -125,19 +215,6 @@ This mode supports:
 - Optional voice input/output
 
 ⚠️ The CLI is considered **legacy** and intended mainly for development/debugging.
-
-🌍 Expose API to the Internet (FREE):
-
-```bash
-cloudflared tunnel --url http://localhost:8000
-```
-
-Example public URL:
-
-https://random-name.trycloudflare.com
-
-
-No domain or payment required.
 
 ## 🔐 Security
 
